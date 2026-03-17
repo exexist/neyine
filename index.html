@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEYİNE FİFA | Ultra Analiz Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #FFCC00; --primary-glow: rgba(255, 204, 0, 0.4); --bg-dark: #050505; --card-bg: rgba(20, 20, 20, 0.8); }
+        
+        /* 3D Arkaplan Katmanı */
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle at center, #111 0%, #050505 100%); }
+
+        body { background-color: var(--bg-dark); color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; scroll-behavior: smooth; }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+
+        /* Modern Glassmorphism Kartları */
+        .glass-card { 
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .glass-card:hover { border-color: rgba(255, 204, 0, 0.3); }
+
+        /* Neon Oran Kutuları */
+        .odds-box { 
+            background: rgba(40, 40, 40, 0.6); 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 42px;
+        }
+        .odds-box:hover { background: rgba(60, 60, 60, 0.8); transform: translateY(-2px); border-color: var(--primary); }
+        
+        /* SEÇİLDİĞİNDE SARI YANMASINI SAĞLAYAN KISIM */
+        .odds-box.active { 
+            background: var(--primary) !important; 
+            color: #000 !important; 
+            border-color: #fff !important; 
+            box-shadow: 0 0 20px var(--primary-glow); 
+            transform: scale(1.05);
+        }
+        .odds-box.active span { color: #000 !important; opacity: 1 !important; }
+
+        /* Yeni Alert Box (Yukarıdan Aşağı Akıcı) */
+        #alert-box { 
+            position: fixed; top: -100px; left: 50%; transform: translateX(-50%); 
+            z-index: 10000; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+            min-width: 300px;
+        }
+        .alert-active { top: 30px !important; }
+
+        /* Başlık Efektleri */
+        .section-label { 
+            font-size: 8px; color: var(--primary); font-weight: 900; 
+            text-transform: uppercase; letter-spacing: 1.5px; 
+            margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+        }
+        .section-label::after { content: ""; height: 1px; flex-grow: 1; background: linear-gradient(90deg, rgba(255,204,0,0.5), transparent); }
+
+        /* Kaydırma Çubuğu */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        /* Animasyonlar */
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(255, 204, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 204, 0, 0); } }
+        .btn-glow { animation: pulse-gold 2s infinite; }
+    </style>
+</head>
+<body class="p-2 md:p-6">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="alert-box" class="glass-card p-4 flex items-center space-x-4 border-b-4 border-b-[#FFCC00] shadow-2xl">
+        <div class="w-8 h-8 bg-[#FFCC00] text-black rounded-full flex items-center justify-center font-black">!</div>
+        <p id="alert-msg" class="text-xs text-white font-bold orbitron uppercase tracking-widest"></p>
+    </div>
+
+    <div class="max-w-[1500px] mx-auto relative">
+        <header class="flex justify-between items-center mb-8 bg-white/5 p-5 rounded-[25px] border border-white/10 backdrop-blur-md">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-[#FFCC00] rounded-2xl flex items-center justify-center text-black font-black text-2xl orbitron shadow-[0_0_30px_rgba(255,204,0,0.5)]">N</div>
+                <div>
+                    <h1 class="text-2xl font-black orbitron tracking-tighter text-[#FFCC00] leading-none">NEYİNE <span class="text-white">FİFA</span></h1>
+                    <p class="text-[9px] text-gray-400 font-bold uppercase tracking-[4px]">Elite Analytics</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <p class="text-[9px] text-gray-500 uppercase font-black">Kullanılabilir Limit</p>
+                    <p id="balance" class="text-xl font-black text-white orbitron">₺5.000,00</p>
+                </div>
+                <button onclick="resetBalance()" class="bg-white/5 hover:bg-[#FFCC00] hover:text-black p-3 rounded-xl transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 21v-5h5"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-6">
+            <div class="col-span-12 md:col-span-1">
+                <div id="week-nav" class="flex md:flex-col gap-3 overflow-x-auto pb-4 md:pb-0 custom-scroll"></div>
+            </div>
+
+            <div class="col-span-12 md:col-span-8 space-y-6">
+                <div id="match-container" class="space-y-6"></div>
+            </div>
+
+            <div class="col-span-12 md:col-span-3 space-y-6">
+                <div class="glass-card p-6 sticky top-6 border-t-4 border-t-[#FFCC00]">
+                    <h3 class="orbitron text-sm font-black mb-6 flex justify-between items-center text-[#FFCC00]">KUPON PANELİ <span id="slip-count" class="bg-white/10 px-3 py-1 rounded-full text-white text-[10px]">0</span></h3>
+                    <div id="slip-items" class="space-y-3 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+                        <div class="text-center py-12 opacity-30 italic text-sm">Bültenden seçim bekleniyor...</div>
+                    </div>
+
+                    <div class="bg-black/40 rounded-2xl p-4 space-y-4 border border-white/5">
+                        <div class="flex justify-between text-xs font-bold"><span class="text-gray-500 uppercase">Toplam Çarpan</span><span id="total-odds" class="text-[#FFCC00] orbitron font-black text-lg">1.00</span></div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 text-xs font-bold uppercase">MİKTAR</span>
+                            <input id="stake-input" type="number" value="100" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 w-24 text-right text-sm font-bold outline-none focus:border-[#FFCC00] transition-colors">
+                        </div>
+                        <div class="pt-2 border-t border-white/5">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-gray-500 text-[10px] font-black uppercase">Tahmini Kazanç</span>
+                                <span id="potential-win" class="text-green-400 font-black text-lg orbitron">₺0,00</span>
+                            </div>
+                            <button onclick="placeBet()" class="w-full bg-[#FFCC00] hover:bg-white text-black font-black py-4 rounded-xl transition-all duration-300 orbitron text-xs tracking-[3px] shadow-[0_10px_20px_rgba(255,204,0,0.2)] btn-glow uppercase">Kuponu Onayla</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 border-t-4 border-t-blue-500">
+                    <h3 class="orbitron text-[10px] font-black mb-4 text-blue-400 uppercase tracking-widest">Kupon Geçmişi</h3>
+                    <div id="my-bets" class="space-y-3 max-h-[200px] overflow-y-auto pr-2 custom-scroll"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 3D BACKGROUND EFFECT ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * 0.5 - 0.25;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.y > canvas.height) this.y = 0;
+                if (this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+        function animateBg() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            ctx.strokeStyle = 'rgba(255, 204, 0, 0.05)';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 150) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // --- CORE LOGIC (UNTOUCHED) ---
+        let balance = parseFloat(localStorage.getItem('nf_balance')) || 5000;
+        let myBets = JSON.parse(localStorage.getItem('nf_bets')) || [];
+        
+        const playerStats = {
+            'Kaya': { power: 88, gFactor: 1.4 }, 'Demir': { power: 82, gFactor: 0.9 },
+            'Emir': { power: 79, gFactor: 1.3 }, 'İlker': { power: 75, gFactor: 0.7 },
+            'Yiğit': { power: 72, gFactor: 1.0 }, 'Tuğra': { power: 65, gFactor: 0.6 }
+        };
+
+        const fullFixture = [
+            { w: 1, m: [{h: 'Emir', a: 'İlker'}, {h: 'Kaya', a: 'Demir'}, {h: 'Tuğra', a: 'Yiğit'}] },
+            { w: 2, m: [{h: 'Kaya', a: 'Emir'}, {h: 'Demir', a: 'Tuğra'}, {h: 'İlker', a: 'Yiğit'}] },
+            { w: 3, m: [{h: 'Yiğit', a: 'Kaya'}, {h: 'Emir', a: 'Demir'}, {h: 'Tuğra', a: 'İlker'}] },
+            { w: 4, m: [{h: 'Demir', a: 'İlker'}, {h: 'Kaya', a: 'Tuğra'}, {h: 'Yiğit', a: 'Emir'}] },
+            { w: 5, m: [{h: 'Emir', a: 'Demir'}, {h: 'İlker', a: 'Kaya'}, {h: 'Tuğra', a: 'Yiğit'}] },
+            { w: 6, m: [{h: 'Kaya', a: 'Yiğit'}, {h: 'Demir', a: 'Emir'}, {h: 'İlker', a: 'Tuğra'}] },
+            { w: 7, m: [{h: 'Tuğra', a: 'Kaya'}, {h: 'Emir', a: 'İlker'}, {h: 'Yiğit', a: 'Demir'}] },
+            { w: 8, m: [{h: 'İlker', a: 'Demir'}, {h: 'Kaya', a: 'Emir'}, {h: 'Tuğra', a: 'Yiğit'}] },
+            { w: 9, m: [{h: 'Demir', a: 'Kaya'}, {h: 'Emir', a: 'Yiğit'}, {h: 'İlker', a: 'Tuğra'}] },
+            { w: 10, m: [{h: 'Kaya', a: 'İlker'}, {h: 'Emir', a: 'Tuğra'}, {h: 'Yiğit', a: 'Demir'}] }
+        ];
+
+        let currentWeek = 1;
+        let slip = [];
+
+        function updateBalanceUI() {
+            document.getElementById('balance').innerText = '₺' + balance.toLocaleString('tr-TR', {minimumFractionDigits:2});
+            localStorage.setItem('nf_balance', balance);
+        }
+
+        function resetBalance() {
+            if(confirm("Bakiye 5000 TL yapılsın mı?")) { balance = 5000; updateBalanceUI(); showAlert("CÜZDAN GÜNCELLENDİ"); }
+        }
+
+        function getFullOdds(h, a, type) {
+            const hS = playerStats[h]; const aS = playerStats[a];
+            const pDiff = hS.power - aS.power;
+            const gExp = (hS.gFactor + aS.gFactor) / 2;
+
+            if(type === 'MS1') return (1.80 - pDiff * 0.015).toFixed(2);
+            if(type === 'MSX') return (3.40).toFixed(2);
+            if(type === 'MS2') return (1.80 + pDiff * 0.015).toFixed(2);
+            if(type === 'CS1X') return (1.20 - pDiff * 0.005).toFixed(2);
+            if(type === 'CS12') return (1.25).toFixed(2);
+            if(type === 'CSX2') return (1.20 + pDiff * 0.005).toFixed(2);
+            if(type === 'KGV') return (1.75 - gExp * 0.1).toFixed(2);
+            if(type === 'KGY') return (1.95 + gExp * 0.1).toFixed(2);
+
+            const getOU = (b, u) => u ? (1.80 - (gExp - b/2)*0.4).toFixed(2) : (1.80 + (gExp - b/2)*0.4).toFixed(2);
+            if(type === 'A25') return getOU(2.5, false); if(type === 'U25') return (getOU(2.5, true) * 0.88).toFixed(2);
+            if(type === 'A35') return getOU(3.5, false); if(type === 'U35') return getOU(3.5, true);
+            if(type === 'A45') return getOU(4.5, false); if(type === 'U45') return getOU(4.5, true);
+            if(type === 'A55') return getOU(5.5, false); if(type === 'U55') return getOU(5.5, true);
+            if(type === 'T01') return (3.80).toFixed(2); if(type === 'T23') return (1.90).toFixed(2);
+            if(type === 'T46') return (2.60).toFixed(2); if(type === 'T7+') return (11.00).toFixed(2);
+
+            if(type === 'H25A') return (1.30 + pDiff * 0.01).toFixed(2);
+            if(type === 'H25U') return (2.40 - pDiff * 0.02).toFixed(2);
+            if(type === 'A25A') return (1.30 - pDiff * 0.01).toFixed(2);
+            if(type === 'A25U') return (2.40 + pDiff * 0.02).toFixed(2);
+
+            return "1.90";
+        }
+
+        function changeWeek(w) { currentWeek = w; renderWeeks(); renderMatches(); }
+
+        function renderWeeks() {
+            const nav = document.getElementById('week-nav');
+            nav.innerHTML = '';
+            for(let i=1; i<=10; i++) {
+                nav.innerHTML += `<button onclick="changeWeek(${i})" class="min-w-[45px] h-12 rounded-xl border border-white/10 font-black orbitron text-[11px] transition-all ${i==currentWeek?'bg-[#FFCC00] text-black shadow-[0_0_15px_rgba(255,204,0,0.4)]':'text-gray-500 hover:bg-white/5'}">${i}</button>`;
+            }
+        }
+
+        function renderMatches() {
+            const container = document.getElementById('match-container');
+            container.innerHTML = '';
+            const matches = fullFixture.find(f => f.w === currentWeek).m;
+
+            matches.forEach((m, idx) => {
+                const mId = `${currentWeek}-${idx}`;
+                const tName = `${m.h} v ${m.a}`;
+                container.innerHTML += `
+                    <div class="glass-card p-5 space-y-6">
+                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5">
+                            <span class="orbitron font-black text-sm uppercase text-white tracking-wider">${m.h}</span>
+                            <div class="flex flex-col items-center"><span class="bg-[#FFCC00] text-black text-[7px] font-black px-2 py-0.5 rounded-full">LIVE</span></div>
+                            <span class="orbitron font-black text-sm uppercase text-white tracking-wider">${m.a}</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div><span class="section-label">MS & Çifte Şans</span>
+                                <div class="grid grid-cols-3 gap-1.5 mb-2">${renderBtn(mId, tName, 'MS1', '1')} ${renderBtn(mId, tName, 'MSX', 'X')} ${renderBtn(mId, tName, 'MS2', '2')}</div>
+                                <div class="grid grid-cols-3 gap-1.5">${renderBtn(mId, tName, 'CS1X', '1X')} ${renderBtn(mId, tName, 'CS12', '12')} ${renderBtn(mId, tName, 'CSX2', 'X2')}</div>
+                            </div>
+                            <div><span class="section-label">Alt / Üst (2.5 - 3.5)</span>
+                                <div class="grid grid-cols-2 gap-1.5 mb-1.5">${renderBtn(mId, tName, 'A25', '2.5 A')} ${renderBtn(mId, tName, 'U25', '2.5 Ü')}</div>
+                                <div class="grid grid-cols-2 gap-1.5">${renderBtn(mId, tName, 'A35', '3.5 A')} ${renderBtn(mId, tName, 'U35', '3.5 Ü')}</div>
+                            </div>
+                            <div><span class="section-label">Alt / Üst (4.5 - 5.5)</span>
+                                <div class="grid grid-cols-2 gap-1.5 mb-1.5">${renderBtn(mId, tName, 'A45', '4.5 A')} ${renderBtn(mId, tName, 'U45', '4.5 Ü')}</div>
+                                <div class="grid grid-cols-2 gap-1.5">${renderBtn(mId, tName, 'A55', '5.5 A')} ${renderBtn(mId, tName, 'U55', '5.5 Ü')}</div>
+                            </div>
+                            <div><span class="section-label">KG & Gol Aralığı</span>
+                                <div class="grid grid-cols-2 gap-1.5 mb-1.5">${renderBtn(mId, tName, 'KGV', 'VAR')} ${renderBtn(mId, tName, 'KGY', 'YOK')}</div>
+                                <div class="grid grid-cols-4 gap-1">${renderBtn(mId, tName, 'T01', '0-1')} ${renderBtn(mId, tName, 'T23', '2-3')} ${renderBtn(mId, tName, 'T46', '4-6')} ${renderBtn(mId, tName, 'T7+', '7+')}</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-white/5"><span class="section-label">Takım Özel Golleri (2.5)</span>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                ${renderBtn(mId, tName, 'H25A', 'EV 2.5 ALT')} ${renderBtn(mId, tName, 'H25U', 'EV 2.5 ÜST')}
+                                ${renderBtn(mId, tName, 'A25A', 'DEP 2.5 ALT')} ${renderBtn(mId, tName, 'A25U', 'DEP 2.5 ÜST')}
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // --- BUTONUN SARI YANMASINI SAĞLAYAN GÜNCELLEME ---
+        function renderBtn(mId, teams, type, label) {
+            const val = getFullOdds(teams.split(' v ')[0], teams.split(' v ')[1], type);
+            // Eğer bu maçın bu tipi kuponda (slip) varsa 'active' sınıfını ekle
+            const activeClass = slip.find(s => s.mId === mId && s.type === type) ? 'active' : '';
+            return `<div onclick="addToSlip('${mId}', '${teams}', '${type}', '${label}', ${val})" class="odds-box ${activeClass}">
+                        <span class="text-[7px] opacity-40 uppercase font-black tracking-tighter">${label}</span>
+                        <span class="font-black text-[11px] orbitron">${val}</span>
+                    </div>`;
+        }
+
+        function addToSlip(mId, teams, type, label, val) {
+            const idx = slip.findIndex(s => s.mId === mId);
+            if(idx > -1) {
+                if(slip[idx].type === type) slip.splice(idx, 1);
+                else slip[idx] = { mId, teams, type, label, val };
+            } else slip.push({ mId, teams, type, label, val });
+            updateUI();
+        }
+
+        function updateUI() {
+            updateBalanceUI();
+            const container = document.getElementById('slip-items');
+            let total = 1;
+            if(slip.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 opacity-30 italic text-sm">Bültenden seçim bekleniyor...</div>`;
+            } else {
+                container.innerHTML = '';
+                slip.forEach(item => {
+                    total *= item.val;
+                    container.innerHTML += `<div class="bg-white/5 p-3 rounded-xl border border-white/10 flex justify-between items-center group">
+                        <div class="text-[9px]"><p class="font-black text-[#FFCC00] uppercase tracking-tighter">${item.teams}</p><p class="text-white font-bold opacity-80">${item.label}</p></div>
+                        <span class="font-black text-[#FFCC00] orbitron text-xs">${item.val}</span>
+                    </div>`;
+                });
+            }
+            document.getElementById('total-odds').innerText = total.toFixed(2);
+            document.getElementById('slip-count').innerText = slip.length;
+            const stake = document.getElementById('stake-input').value;
+            document.getElementById('potential-win').innerText = '₺' + (stake * total).toLocaleString('tr-TR', {minimumFractionDigits:2});
+            renderMatches(); // Seçim değiştiğinde buton renklerini güncellemek için bülteni tekrar render et
+            renderMyBets();
+        }
+
+        function showAlert(msg) {
+            const b = document.getElementById('alert-box');
+            document.getElementById('alert-msg').innerText = msg;
+            b.classList.add('alert-active');
+            setTimeout(() => b.classList.remove('alert-active'), 3000);
+        }
+
+        function placeBet() {
+            const stake = parseFloat(document.getElementById('stake-input').value);
+            if(slip.length === 0) return showAlert("SEÇİM YAPILMADI");
+            if(stake > balance) return showAlert("YETERSİZ BAKİYE");
+            balance -= stake;
+            myBets.unshift({ id: Math.floor(10000 + Math.random()*89999), stake, odds: parseFloat(document.getElementById('total-odds').innerText), status: 'BEKLİYOR' });
+            slip = [];
+            localStorage.setItem('nf_bets', JSON.stringify(myBets));
+            updateUI();
+            showAlert("KUPON ONAYLANDI!");
+        }
+
+        function setRes(id, res) {
+            const b = myBets.find(x => x.id === id);
+            if(res === 'W') { balance += (b.stake * b.odds); b.status = 'KAZANDI'; }
+            else { b.status = 'KAYBETTİ'; }
+            localStorage.setItem('nf_bets', JSON.stringify(myBets));
+            updateUI();
+        }
+
+        function renderMyBets() {
+            const c = document.getElementById('my-bets');
+            c.innerHTML = '';
+            myBets.forEach(b => {
+                c.innerHTML += `<div class="bg-white/5 p-3 rounded-xl border border-white/5 flex justify-between items-center text-[9px]">
+                    <div><b class="text-white/70 orbitron">#${b.id}</b><br><span class="opacity-50">Geri Dönüş: ₺${(b.stake * b.odds).toFixed(2)}</span></div>
+                    ${b.status=='BEKLİYOR'?`<div><button onclick="setRes(${b.id},'W')" class="bg-green-600 px-2 py-1 rounded text-white mr-1 font-bold">✔</button><button onclick="setRes(${b.id},'L')" class="bg-red-600 px-2 py-1 rounded text-white font-bold">✘</button></div>`:`<span class="${b.status=='KAZANDI'?'text-green-400':'text-red-400'} font-black uppercase text-[8px] orbitron">${b.status}</span>`}
+                </div>`;
+            });
+        }
+
+        document.getElementById('stake-input').addEventListener('input', updateUI);
+        renderWeeks(); renderMatches(); updateUI();
+    </script>
+</body>
+</html>
